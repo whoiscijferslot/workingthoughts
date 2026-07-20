@@ -1,0 +1,62 @@
+Summary
+The CRM rejected the record because the "Founded Date" field will not accept the value Specter sent. You must change the CRM field settings so that the value Specter is pushing is a valid value for that field (do not change Specter).
+
+1) What went wrong
+- The integrations API returned: INVALID_VALUE_FOR_COLUMN — "Field 'Founded Date' cannot accept the provided value".
+- That means the CRM refused the incoming Founded Date value for that Company record (type/format/validation mismatch or field is not writable).
+
+2) Most likely root causes (pick whichever matches your CRM)
+- The Founded Date field is a formula/rollup/auto-generated or otherwise read-only field (cannot be written to).
+- The Founded Date field is a Date type but the pushed value is not a valid date format for the CRM (e.g., Specter sent "2018", "Mar 2018", "Q1 2018", or another non-ISO string while the CRM expects YYYY-MM-DD / ISO-8601).
+- There is a field-level validation rule or restriction (e.g., disallow future dates, limited range, required format) that rejects the provided value.
+- The field is a picklist or another type (not Date/Text) so arbitrary date text is invalid.
+
+3) Specific steps you must take in your CRM (do this in the CRM admin console)
+a) Inspect the Founded Date field
+   - Go to the Company/Account object (or equivalent) → Fields/Properties → find "Founded Date".
+   - Check the field Type and whether it is editable.
+
+b) Make the field accept the incoming value
+   - If the field is read-only (formula/rollup/auto): change it to an editable field (Date or Text), or add a new editable field for imports (e.g., "Founded Date (import)") and make it writable.
+   - If the field is Date type but the CRM expects a strict format and Specter sends only a year or partial date: either
+     - allow the CRM to accept the current format (if your CRM supports changing accepted date parsing), or
+     - change the field to Text (if you must accept partial/non-standard date strings) or create a new Text field for imports.
+   - If there are validation rules on that field (format/range/future-date disallowed), edit or disable the rule so the incoming value is permitted.
+   - If the field is a picklist, change it to Date/Text or add the expected values to the picklist (but date picklists are unusual).
+
+c) Save changes and test
+   - Manually create or update a record in the CRM with the exact Founded Date value that failed (check your Specter logs for the exact string).
+   - Confirm the CRM accepts that value without error.
+   - Once CRM accepts the manual entry, re-run the Specter push.
+
+Notes and troubleshooting
+- If you cannot change the existing field type (some CRMs block changing certain field types), create a new editable field that will accept the incoming value (Text or Date as appropriate).
+- If you’re unsure what exact value Specter sent, check the Specter logs for the failed item (it contains the Company record) or share the exact Founded Date value and I can advise whether Date vs Text is appropriate.
+- After you make the CRM change, retry the push. If you still get an error, provide the CRM name and the raw Founded Date value and I’ll give exact CRM-specific steps.
+
+Reminder: change the CRM field configuration (type/editable/validation). Do not change Specter settings for this fix.
+
+Errors (1)
+
+{
+  "data": {
+    "error": {
+      "type": "INVALID_VALUE_FOR_COLUMN",
+      "message": "Field \"Founded Date\" cannot accept the provided value"
+    },
+    "cleanupError": null,
+    "cleanupFailed": false
+  },
+  "item": {
+    "entity": {
+      "Company Name": "Sekai",
+      "Domain": "sekaiapp.com",
+      "LinkedIn - URL": "linkedin.com/company/sekaiapp"
+    },
+    "match": null
+  },
+  "stack": "PromisePoolError\n    at PromisePoolError.createFrom (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-error.js:30:16)\n    at PromisePoolExecutor.saveErrorFor (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:543:66)\n    at PromisePoolExecutor.handleErrorFor (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:474:20)\n    at /app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:389:24\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)\n    at async PromisePoolExecutor.start (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:273:16)\n    at createAndEnrichRecords (/app/utils/createAndEnrichRecords.ts:32:31)",
+  "message": "PromisePoolError",
+  "cleanupError": null,
+  "cleanupFailed": false
+}
