@@ -1,0 +1,49 @@
+Yes, there are much better ways. The right approach depends on your security requirement — email attachments are actually the worst choice for confidentiality since you lose control once sent.
+
+Recommended: DocSend (industry standard for investors)
+
+Instead of attaching PDFs, upload each one to DocSend and send each investor a unique, access-controlled link. Benefits:
+•  Each link works only for that recipient (you set it)
+•  You can revoke access anytime
+•  You see exactly who opened it, for how long, page by page
+•  Used widely in VC/deal flow — investors expect it
+
+Pair it with Mailmeteor (Gmail add-on) or Lemlist for the bulk sending with mail merge.
+
+
+
+If you must send actual PDF attachments
+
+Python script is the most flexible:
+
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
+import pandas as pd
+
+df = pd.read_csv("investors.csv")  # columns: email, name, pdf_path
+
+for _, row in df.iterrows():
+    msg = MIMEMultipart()
+    msg["To"] = row["email"]
+    msg["Subject"] = f"Deal memo - {row['name']}"
+    
+    with open(row["pdf_path"], "rb") as f:
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header("Content-Disposition", f"attachment; filename={row['name']}.pdf")
+        msg.attach(part)
+    
+    # Send via SendGrid/SMTP
+
+Use SendGrid's API instead of raw SMTP for reliability at 100 recipients.
+
+Quick comparison
+Approach	Setup	Security	Tracking
+DocSend + Mailmeteor	Low	High (revocable)	Yes
+Python + SendGrid	Medium	Medium (attachment)	Basic
+By hand	None	Medium	None
+For investor outreach specifically, DocSend is the right tool — it's what the industry uses.
